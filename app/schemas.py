@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class PostBase(BaseModel):
@@ -19,4 +19,16 @@ class PostResponse(PostBase):
         from_attributes=True  
     )
 
+class UserCreate(BaseModel):
+	email: EmailStr
+	password: str
+
+class UserOut(BaseModel):
+	id: int
+	email: EmailStr
+	created_at: datetime
 	
+	model_config = ConfigDict(
+		# ANTES: orm_mode = True, para mapear el objeto del modelo orm con este
+        from_attributes=True  
+    )
