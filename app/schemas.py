@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 
@@ -32,3 +33,14 @@ class UserOut(BaseModel):
 		# ANTES: orm_mode = True, para mapear el objeto del modelo orm con este
         from_attributes=True  
     )
+
+class UserLogin(BaseModel):
+	email: EmailStr
+	password: str
+
+class Token(BaseModel):
+	access_token: str
+	token_type: str
+
+class TokenData(BaseModel):
+	id: Optional[str] = None
