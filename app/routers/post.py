@@ -24,6 +24,7 @@ def create_post(new_post: schemas.PostCreate, db:Session = Depends(get_db), get_
 	# inserted_post = cursor.fetchone()
 	# conn.commit()
 	#new_post.model_dump() lo pasa a dict
+	print(get_current_user.email)
 	inserted_post = models.Post(**new_post.model_dump())
 	db.add(inserted_post)
 	db.commit()
@@ -49,7 +50,7 @@ def get_post(id: int, db:Session = Depends(get_db)):
 
 
 @router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id: int, db:Session = Depends(get_db)):
+def delete_post(id: int, db:Session = Depends(get_db), get_current_user: int = Depends(oauth2.get_current_user)):
 	# cursor.execute(''' DELETE FROM posts WHERE id = %s RETURNING *''', (str(id)))
 	# deleted_post = cursor.fetchone()
 	# conn.commit()
@@ -66,7 +67,7 @@ def delete_post(id: int, db:Session = Depends(get_db)):
 	return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @router.put('/{id}', response_model=schemas.PostResponse)
-def update_post(id: int, post: schemas.PostCreate, db:Session = Depends(get_db)):
+def update_post(id: int, post: schemas.PostCreate, db:Session = Depends(get_db), get_current_user: int = Depends(oauth2.get_current_user)):
 	# cursor.execute('''UPDATE posts SET title = %s,
 	# 			content = %s,
 	# 			published = %s
