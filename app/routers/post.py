@@ -24,8 +24,10 @@ def create_post(new_post: schemas.PostCreate, db:Session = Depends(get_db), get_
 	# inserted_post = cursor.fetchone()
 	# conn.commit()
 	#new_post.model_dump() lo pasa a dict
-	print(get_current_user.email)
-	inserted_post = models.Post(**new_post.model_dump())
+	print(get_current_user.id)
+	post_info = new_post.model_dump()
+	post_info.update({"user_id": get_current_user.id})
+	inserted_post = models.Post(**post_info)
 	db.add(inserted_post)
 	db.commit()
 	#recupera el elemento insertado en el commit y se lo da
@@ -58,8 +60,12 @@ def delete_post(id: int, db:Session = Depends(get_db), get_current_user: int = D
 			models.Post.id == id
 		)
 
-	if not post.first():
+	post_first = post.first() 
+	if not post_first:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Item {id} not found")
+	
+	if post_first.user_id != get_current_user.id:
+		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Not authorized to perform this action")
 	
 	post.delete(synchronize_session=False)
 	db.commit()
@@ -81,8 +87,13 @@ def update_post(id: int, post: schemas.PostCreate, db:Session = Depends(get_db),
 			models.Post.id == id
 		)
 	print(post_query)
+
+	post_first = post_query.first() 
 	if not post_query.first():
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Item {id} not found")
+	
+	if post_first.user_id != get_current_user.id:
+		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Not authorized to perform this action")
 	
 	post_query.update(post.model_dump(), synchronize_session=False)
 	db.commit()
