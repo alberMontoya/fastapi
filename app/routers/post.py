@@ -3,13 +3,14 @@ from fastapi import Depends,  Response, status, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 from app import models, schemas, oauth2
 from ..database import get_db
+from sqlalchemy import func
 
 router = APIRouter(
 	prefix="/posts",
 	tags=['Posts']
 )
 
-@router.get('/', response_model=List[schemas.PostResponse])
+@router.get('/', response_model=List[schemas.PostVotes])
 def get_posts(db:Session = Depends(get_db),  
 			  get_current_user: int = Depends(oauth2.get_current_user),
 			  limit: int = 10,
@@ -18,9 +19,16 @@ def get_posts(db:Session = Depends(get_db),
 	# posts = cursor.fetchall()
 	#query parameter
 	print(limit)
-	posts = db.query(models.Post).limit(limit).offset(skip).all()
+	#posts = db.query(models.Post).limit(limit).offset(skip).all()
 	#print(posts)
-	return posts
+	"""
+	post_votes devuelve una tupla (models.Post, votes). La clase schemas.PostVotes validara
+	el primer parametro como un PostResponse(en mayuscula en el esquema porque asi
+	lo intentara validar pydantic) y el segundo como un int
+	"""
+	post_votes = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(
+		models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).limit(limit).offset(skip).all()
+	return post_votes
 
 @router.post('/', status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse)
 def create_post(new_post: schemas.PostCreate, db:Session = Depends(get_db), get_current_user: int = Depends(oauth2.get_current_user)):
@@ -40,14 +48,15 @@ def create_post(new_post: schemas.PostCreate, db:Session = Depends(get_db), get_
 	db.refresh(inserted_post)
 	return inserted_post
 	
-@router.get('/{id}', response_model=schemas.PostResponse)
+@router.get('/{id}', response_model=schemas.PostVotes)
 def get_post(id: int, db:Session = Depends(get_db)):
 	#id tiene que ser str para que no cree conflictos %s
 	# cursor.execute('''SELECT * FROM posts WHERE id=%s''', (str(id)))
 	# post = cursor.fetchone()
 	# if not post:
 	# 	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Item {id} not found")
-	post = db.query(models.Post).filter(
+	post = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(
+		models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).filter(
 			models.Post.id == id
 		).first()
 	if not post:

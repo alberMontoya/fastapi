@@ -40,6 +40,18 @@ class PostResponse(PostBase):
         from_attributes=True  
     )
 
+class PostVotes(BaseModel):
+	"""
+	Post en uppercase porque asi lo devolvera la query en la tupla
+	"""
+	Post: PostResponse
+	votes: int
+
+	model_config = ConfigDict(
+		# ANTES: orm_mode = True, para mapear el objeto del modelo orm con este
+        from_attributes=True  
+    )
+
 class Token(BaseModel):
 	access_token: str
 	token_type: str
