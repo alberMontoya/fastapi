@@ -3,14 +3,14 @@ from fastapi import Depends,  Response, status, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 from app import models, schemas, oauth2
 from ..database import get_db
-from sqlalchemy import func
+from sqlalchemy import func, select, delete, update
 
 router = APIRouter(
 	prefix="/posts",
 	tags=['Posts']
 )
 
-@router.get('/', response_model=List[schemas.PostVotes])
+@router.get('', response_model=List[schemas.PostVotes])
 def get_posts(db:Session = Depends(get_db),  
 			  get_current_user: int = Depends(oauth2.get_current_user),
 			  limit: int = 10,
@@ -18,7 +18,7 @@ def get_posts(db:Session = Depends(get_db),
 	# cursor.execute('''SELECT * FROM posts''')
 	# posts = cursor.fetchall()
 	#query parameter
-	print(limit)
+	#print(limit)
 	#posts = db.query(models.Post).limit(limit).offset(skip).all()
 	#print(posts)
 	"""
@@ -26,27 +26,35 @@ def get_posts(db:Session = Depends(get_db),
 	el primer parametro como un PostResponse(en mayuscula en el esquema porque asi
 	lo intentara validar pydantic) y el segundo como un int
 	"""
-	post_votes = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(
-		models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).limit(limit).offset(skip).all()
-	return post_votes
+	stmt = select(models.Post, func.count(models.Vote.post_id).label("votes")).join(
+		models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).limit(limit).offset(skip)
+	result = db.execute(stmt).all()
+	return result
 
-@router.post('/', status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse)
+@router.post('', status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse)
 def create_post(new_post: schemas.PostCreate, db:Session = Depends(get_db), get_current_user: int = Depends(oauth2.get_current_user)):
 	# cursor.execute('''INSERT INTO posts (title, content, published) VALUES
 	# 	(%s, %s, %s) RETURNING *''', (new_post.title, new_post.content, new_post.published))
 	# inserted_post = cursor.fetchone()
 	# conn.commit()
 	#new_post.model_dump() lo pasa a dict
-	print(get_current_user.id)
-	post_info = new_post.model_dump()
-	post_info.update({"user_id": get_current_user.id})
-	inserted_post = models.Post(**post_info)
-	db.add(inserted_post)
-	db.commit()
-	#recupera el elemento insertado en el commit y se lo da
-	#a la variable que se lo pasa
-	db.refresh(inserted_post)
-	return inserted_post
+	try:
+		print(get_current_user.id)
+		post_info = new_post.model_dump()
+		post_info.update({"user_id": get_current_user.id})
+		inserted_post = models.Post(**post_info)
+		db.add(inserted_post)
+		db.commit()
+		#recupera el elemento insertado en el commit y se lo da
+		#a la variable que se lo pasa
+		db.refresh(inserted_post)
+		return inserted_post
+	except:
+		db.rollback()
+		raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while creating the post"
+        )
 	
 @router.get('/{id}', response_model=schemas.PostVotes)
 def get_post(id: int, db:Session = Depends(get_db)):
@@ -55,10 +63,11 @@ def get_post(id: int, db:Session = Depends(get_db)):
 	# post = cursor.fetchone()
 	# if not post:
 	# 	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Item {id} not found")
-	post = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(
-		models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).filter(
+	stmt = select(models.Post, func.count(models.Vote.post_id).label("votes")).join(
+		models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).where(
 			models.Post.id == id
-		).first()
+		)
+	post = db.execute(stmt).one_or_none()
 	if not post:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Item {id} not found")
 	
@@ -70,21 +79,27 @@ def delete_post(id: int, db:Session = Depends(get_db), get_current_user: int = D
 	# cursor.execute(''' DELETE FROM posts WHERE id = %s RETURNING *''', (str(id)))
 	# deleted_post = cursor.fetchone()
 	# conn.commit()
-	post = db.query(models.Post).filter(
-			models.Post.id == id
-		)
+	try:
+		post = select(models.Post).where(models.Post.id == id)
 
-	post_first = post.first() 
-	if not post_first:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Item {id} not found")
-	
-	if post_first.user_id != get_current_user.id:
-		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Not authorized to perform this action")
-	
-	post.delete(synchronize_session=False)
-	db.commit()
-	#no queremos devolver nada, para delete status 204
-	return Response(status_code=status.HTTP_204_NO_CONTENT)
+		post_first = db.execute(post).scalar_one_or_none() 
+		if not post_first:
+			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Item {id} not found")
+		
+		if post_first.user_id != get_current_user.id:
+			raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Not authorized to perform this action")
+		
+		to_delete = delete(models.Post).where(models.Post.id == id)
+		db.execute(to_delete)
+		db.commit()
+		#no queremos devolver nada, para delete status 204
+		return Response(status_code=status.HTTP_204_NO_CONTENT)
+	except:
+		db.rollback()
+		raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while deleting the post"
+        )
 
 @router.put('/{id}', response_model=schemas.PostResponse)
 def update_post(id: int, post: schemas.PostCreate, db:Session = Depends(get_db), get_current_user: int = Depends(oauth2.get_current_user)):
@@ -96,20 +111,25 @@ def update_post(id: int, post: schemas.PostCreate, db:Session = Depends(get_db),
 	# updated_post = cursor.fetchone()
 	# #commit siempre que hagamos cambios en bbdd (insert, delete, update)
 	# conn.commit()
+	try:
+		post_query = select(models.Post).where(models.Post.id == id)
+		print(post_query)
 
-	post_query = db.query(models.Post).filter(
-			models.Post.id == id
-		)
-	print(post_query)
-
-	post_first = post_query.first() 
-	if not post_first:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Item {id} not found")
-	
-	if post_first.user_id != get_current_user.id:
-		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Not authorized to perform this action")
-	
-	post_query.update(post.model_dump(), synchronize_session=False)
-	db.commit()
-	
-	return post_query.first()
+		post_first = db.execute(post_query).scalar_one_or_none() 
+		if not post_first:
+			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Item {id} not found")
+		
+		if post_first.user_id != get_current_user.id:
+			raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Not authorized to perform this action")
+		
+		to_update = update(models.Post).where(models.Post.id == id).values(**post.model_dump()).returning(models.Post)
+		result = db.execute(to_update)
+		db.commit()
+		
+		return result.scalar_one()
+	except:
+		db.rollback()
+		raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while updating the post"
+        )
