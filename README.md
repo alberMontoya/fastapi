@@ -7,7 +7,7 @@ Los endpoints han sido diseñados para replicar las interacciones fundamentales 
 
 ![Diagrama de Endpoints de la API](./assets/endpoints-red-social.png)
 
-* **Posts:** Creación de publicaciones y su visualización.
+* **Posts:** Creación de publicaciones, eliminación de publicaciones y visualización de publicaciones.
 * **Usuarios:** Creación de usuarios y su visualización.
 * **Votos:** Gestión de "likes" de cada post.
 * **Login:** El endpoint de **login** garantiza la integridad del sistema mediante:
