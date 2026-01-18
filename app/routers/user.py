@@ -25,7 +25,7 @@ def create_user(user: schemas.UserCreate, db:Session = Depends(get_db)):
 		db.rollback()
 		raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while creating the puser"
+            detail="An error occurred while creating the user"
         )
 
 @router.get('/{id}', response_model=schemas.UserOut)

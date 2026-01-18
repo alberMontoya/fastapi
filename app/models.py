@@ -12,8 +12,8 @@ class Post(Base):
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
 	user_id: Mapped[int] = mapped_column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
-	title: Mapped[str] = mapped_column(String(50), nullable=False)
-	content: Mapped[str] = mapped_column(String(50), nullable=False)
+	title: Mapped[str] = mapped_column(String(255), nullable=False)
+	content: Mapped[str] = mapped_column(String(140), nullable=False)
 	published: Mapped[bool] = mapped_column(Boolean, server_default='TRUE', nullable=False)
 	created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False, 
 						server_default=text('now()'))
@@ -27,8 +27,8 @@ class User(Base):
 	__tablename__ = "user"
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
-	email: Mapped[str] = mapped_column(String(30), nullable=False, unique=True)
-	password: Mapped[str] = mapped_column(String(30), nullable=False)
+	email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+	password: Mapped[str] = mapped_column(String(255), nullable=False)
 	created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False, 
 						server_default=text('now()'))
 	def __repr__(self):
