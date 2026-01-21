@@ -1,24 +1,29 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 from .config import settings
-import psycopg
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from typing import AsyncGenerator
 
 #dialect+driver://user:password@host:port/database_name
 #motorbbdd://<user>:<password>@<ip>/<bbdd_name>
-SQLALCHEMY_DATABASE_URL =f'postgresql+psycopg://{settings.database_username}:{settings.database_password}@{settings.database_hostname}/{settings.database_name}'
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+SQLALCHEMY_DATABASE_URL =f'postgresql+asyncpg://{settings.database_username}:{settings.database_password}@{settings.database_hostname}/{settings.database_name}'
 
-print(f"Estás usando Psycopg 3: {psycopg.__version__}")
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 
-def get_db():
+SessionLocal = async_sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        await db.close()
+'''def get_db():
 	db = SessionLocal()
 	try:
 		yield db
 	finally:
 		db.close()
+'''
 
 """con psycopg:
 try:
