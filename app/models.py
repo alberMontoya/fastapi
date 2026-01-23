@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, Boolean, ForeignKey
+from sqlalchemy import Integer, String, Boolean, ForeignKey, func
 from sqlalchemy.sql.sqltypes import TIMESTAMP
 from sqlalchemy.sql.expression import text
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
@@ -30,7 +30,7 @@ class User(Base):
 	email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
 	password: Mapped[str] = mapped_column(String(255), nullable=False)
 	created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False, 
-						server_default=text('now()'))
+						server_default=func.now(),)
 	def __repr__(self):
 		return f"User(id={self.id!r}, email={self.email!r}, created_at={self.created_at!r})"
 class Vote(Base):

@@ -45,10 +45,12 @@ async def create_post(new_post: schemas.PostCreate, db:AsyncSession = Depends(ge
 		post_info.update({"user_id": get_current_user.id})
 		inserted_post = models.Post(**post_info)
 		db.add(inserted_post)
-		await db.commit()
+		await db.flush()
 		#recupera el elemento insertado en el commit y se lo da
 		#a la variable que se lo pasa
 		await db.refresh(inserted_post, attribute_names=["owner"]) #para la relationship
+		await db.commit()
+		
 		return inserted_post
 	except:
 		await db.rollback()

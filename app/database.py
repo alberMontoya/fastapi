@@ -9,14 +9,11 @@ SQLALCHEMY_DATABASE_URL =f'postgresql+asyncpg://{settings.database_username}:{se
 
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 
-SessionLocal = async_sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = async_sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    db = SessionLocal()
-    try:
+    async with SessionLocal() as db:
         yield db
-    finally:
-        await db.close()
 '''def get_db():
 	db = SessionLocal()
 	try:

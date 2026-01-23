@@ -14,11 +14,8 @@ async def login(user_credentials: OAuth2PasswordRequestForm = Depends(), db: Asy
 	stmt = select(models.User).where(user_credentials.username == models.User.email)
 	user = (await db.execute(stmt)).scalar_one_or_none()
 
-	if not user:
-		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Invalid credentials')
-	
-	if not utils.verify(user_credentials.password, user.password):
-		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Invalid credentials')
+	if not user or not utils.verify(user_credentials.password, user.password):
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid credentials')
 	
 	#create a JWT token
 	data = {"user_id": user.id}

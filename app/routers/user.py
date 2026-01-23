@@ -15,13 +15,19 @@ async def create_user(user: schemas.UserCreate, db:AsyncSession = Depends(get_db
 	try:
 		#hash the password -> user.password
 		hashed_password = utils.hash(user.password)
-		user.password = hashed_password
-		inserted_user = models.User(**user.model_dump())
+		user_data = user.model_dump()
+		user_data["password"] = hashed_password
+		
+		inserted_user = models.User(**user_data)
 		db.add(inserted_user)
-		await db.commit()
+		await db.flush()
 		await db.refresh(inserted_user)
+		
+		await db.commit()
+		
+		
 		return inserted_user
-	except:
+	except Exception as e:
 		await db.rollback()
 		raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
