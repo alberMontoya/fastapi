@@ -1,0 +1,30 @@
+services:
+    api:
+        build: .
+        ports:
+            - "8000:8000"
+        environment:
+            - DATABASE_HOSTNAME=postgres
+            - DATABASE_PORT=5432
+            - DATABASE_PASSWORD=172498
+            - DATABASE_NAME=fastapi
+            - DATABASE_USERNAME=postgres
+            - SECRET_KEY=22799bff9e6d754555619c511f318f4740531069962c0293e1ee700aef3874dc
+            - ALGORITHM=HS256
+            - ACCESS_TOKEN_EXPIRE_MINUTES=60
+        depends_on:
+            postgres:
+                condition: service_healthy
+
+    postgres:
+        image: postgres:18.1
+        restart: always
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=172498
+            - POSTGRES_DB=fastapi
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
