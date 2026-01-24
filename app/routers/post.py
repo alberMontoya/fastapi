@@ -48,15 +48,15 @@ async def create_post(new_post: schemas.PostCreate, db:AsyncSession = Depends(ge
 		await db.flush()
 		#recupera el elemento insertado en el commit y se lo da
 		#a la variable que se lo pasa
-		await db.refresh(inserted_post, attribute_names=["owner"]) #para la relationship
 		await db.commit()
+		await db.refresh(inserted_post, attribute_names=["owner"]) #para la relationship
 		
 		return inserted_post
-	except:
+	except Exception as e:
 		await db.rollback()
 		raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while creating the post"
+            detail=str(e)
         )
 	
 @router.get('/{id}', response_model=schemas.PostVotes)
