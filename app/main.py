@@ -15,6 +15,7 @@ async def lifespan(app: FastAPI):
 		print(f"El driver activo es: {engine.dialect.driver}")
 	yield
 	print("Cerrando app")
+	await engine.dispose()  # cierre limpio del pool de conexiones abiertas del engine
 
 
 app = FastAPI(lifespan=lifespan)
